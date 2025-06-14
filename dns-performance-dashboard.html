@@ -64,7 +64,6 @@
 
             <!-- Middle Row: Summary & Spikes -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Performance Summary (Left) -->
                 <div class="bg-gray-800 p-6 rounded-2xl shadow-lg">
                     <h3 class="font-semibold text-xl text-gray-200 mb-4">Performance Summary</h3>
                     <div class="space-y-4">
@@ -75,7 +74,6 @@
                         <div id="summaryList" class="space-y-3"></div>
                     </div>
                 </div>
-                <!-- Latency Spike Log (Right) -->
                 <div class="bg-gray-800 p-6 rounded-2xl shadow-lg">
                     <h3 class="font-semibold text-xl text-gray-200 mb-4">Latency Spike Log</h3>
                     <div id="spikeLog" class="h-96 overflow-y-auto space-y-1 pr-2"><p class="text-gray-500 text-sm">Monitoring for spikes...</p></div>
@@ -86,7 +84,7 @@
             <div class="bg-gray-800 p-6 rounded-2xl shadow-lg">
                 <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
                     <h3 id="instructionsTitle" class="font-semibold text-xl text-gray-200">How to Change DNS</h3>
-                    <select id="platformSelect" class="custom-select"><option>Windows 11</option><option>Windows 10</option><option>macOS</option><option>iOS</option><option>Android</option></select>
+                    <select id="platformSelect" class="custom-select"><option>Windows 11</option><option>Windows 10</option><option>macOS</option><option>iOS</option><option>Android</option><option>eero Router</option></select>
                 </div>
                 <div id="instructionsContent" class="text-sm text-gray-300 space-y-3"></div>
             </div>
@@ -111,10 +109,10 @@
             };
 
             const DNS_PROVIDERS = {
-                'cloudflare': { name: 'Cloudflare', url: 'https://1.1.1.1/favicon.ico', color: '#67e8f9', ips: ['1.1.1.1', '1.0.0.1'], host: 'one.one.one.one' },
-                'google': { name: 'Google', url: 'https://8.8.8.8/favicon.ico', color: '#c4b5fd', ips: ['8.8.8.8', '8.8.4.4'], host: 'dns.google' },
-                'quad9': { name: 'Quad9', url: 'https://9.9.9.9/favicon.ico', color: '#a7f3d0', ips: ['9.9.9.9', '149.112.112.112'], host: 'dns.quad9.net' },
-                'opendns': { name: 'OpenDNS', url: 'https://208.67.222.222/favicon.ico', color: '#fde047', ips: ['208.67.222.222', '208.67.220.220'], host: null }
+                'cloudflare': { name: 'Cloudflare', url: 'https://1.1.1.1/favicon.ico', color: '#67e8f9', ips: ['1.1.1.1', '1.0.0.1'], ipsV6: ['2606:4700:4700::1111', '2606:4700:4700::1001'], host: 'one.one.one.one' },
+                'google': { name: 'Google', url: 'https://8.8.8.8/favicon.ico', color: '#c4b5fd', ips: ['8.8.8.8', '8.8.4.4'], ipsV6: ['2001:4860:4860::8888', '2001:4860:4860::8844'], host: 'dns.google' },
+                'quad9': { name: 'Quad9', url: 'https://9.9.9.9/favicon.ico', color: '#a7f3d0', ips: ['9.9.9.9', '149.112.112.112'], ipsV6: ['2620:fe::fe', '2620:fe::9'], host: 'dns.quad9.net' },
+                'opendns': { name: 'OpenDNS', url: 'https://208.67.222.222/favicon.ico', color: '#fde047', ips: ['208.67.222.222', '208.67.220.220'], ipsV6: ['2620:119:35::35', '2620:119:53::53'], host: null }
             };
 
             let state = {
@@ -152,7 +150,7 @@
                 elements.instructionsTitle.innerHTML = titleHTML;
 
                 const platform = elements.platformSelect.value;
-                const displayProvider = provider || { name: '[Provider]', ips: ['x.x.x.x', 'y.y.y.y'], host: '[hostname]'};
+                const displayProvider = provider || { name: '[Provider]', ips: ['x.x.x.x', 'y.y.y.y'], ipsV6: ['::', '::'], host: '[hostname]'};
                 let content = '';
                 
                 switch(platform) {
@@ -161,16 +159,23 @@
                     case 'macOS': content = `<ol class="list-decimal list-inside space-y-3"><li>Open <strong>System Settings</strong> > <strong>Network</strong>.</li><li>Select connection, click <strong>Details...</strong>, go to <strong>DNS</strong> tab.</li><li>Click <strong>+</strong> to enter IPs: <ul class="list-disc list-inside ml-6 mt-2 space-y-1"><li id="macos-ip1">Server 1: <code class="ip-address">${displayProvider.ips[0]}</code></li><li id="macos-ip2">Server 2: <code class="ip-address">${displayProvider.ips[1]}</code></li></ul></li><li class="pt-1">Click <strong>OK</strong>.</li></ol>`; break;
                     case 'iOS': content = `<ol class="list-decimal list-inside space-y-3"><li><strong>Settings</strong> > <strong>Wi-Fi</strong>, tap "i" on your network.</li><li>Tap <strong>Configure DNS</strong>, select <strong>Manual</strong>.</li><li>Tap <strong>Add Server</strong> for each IP: <ul class="list-disc list-inside ml-6 mt-2 space-y-1"><li id="ios-ip1">Add: <code class="ip-address">${displayProvider.ips[0]}</code></li><li id="ios-ip2">Add: <code class="ip-address">${displayProvider.ips[1]}</code></li></ul></li><li class="pt-1">Delete old IPs, then <strong>Save</strong>.</li></ol>`; break;
                     case 'Android': content = `<ol class="list-decimal list-inside space-y-3"><li><strong>Settings</strong> > <strong>Network & internet</strong> > <strong>Private DNS</strong>.</li><li>Select <strong>Private DNS provider hostname</strong>.</li><li>Enter: <code class="ip-address">${displayProvider.host || 'Not available'}</code></li><li class="pt-1">Tap <strong>Save</strong>.</li></ol>`; break;
+                    case 'eero Router': content = `<ol class="list-decimal list-inside space-y-3"><li>In the eero app, tap <strong>Settings</strong> > <strong>Network settings</strong>.</li><li>Tap <strong>DNS</strong>, then select <strong>Custom DNS</strong>.</li><li>Enter the IPs in the appropriate fields:</li><ul class="list-disc list-inside ml-6 mt-2 space-y-1"><li id="eerorouter-ip1">IPv4 Primary: <code class="ip-address">${displayProvider.ips[0]}</code></li><li id="eerorouter-ip2">IPv4 Secondary: <code class="ip-address">${displayProvider.ips[1]}</code></li><li class="pt-1 text-gray-400">Optionally, add IPv6 if needed:</li><li id="eerorouter-ipv61" class="ml-4">IPv6 Primary: <code class="ip-address">${displayProvider.ipsV6[0]}</code></li><li id="eerorouter-ipv62" class="ml-4">IPv6 Secondary: <code class="ip-address">${displayProvider.ipsV6[1]}</code></li></ul></li><li class="pt-1">Tap <strong>Save</strong> in the top-right corner.</li></ol>`; break;
                 }
                 elements.instructionsContent.innerHTML = content;
                 
                 if (provider) {
                     if(platform !== 'Android') {
-                        const selectorBase = platform.toLowerCase().replace(' ', '');
+                        const selectorBase = platform.toLowerCase().replace(/ /g, '');
                         const ip1Element = elements.instructionsContent.querySelector(`#${selectorBase}-ip1`);
                         const ip2Element = elements.instructionsContent.querySelector(`#${selectorBase}-ip2`);
                         if (ip1Element) ip1Element.appendChild(createCopyButton(provider.ips[0]));
                         if (ip2Element) ip2Element.appendChild(createCopyButton(provider.ips[1]));
+                        if (platform === 'eero Router') {
+                             const ipv61Element = elements.instructionsContent.querySelector(`#${selectorBase}-ipv61`);
+                             const ipv62Element = elements.instructionsContent.querySelector(`#${selectorBase}-ipv62`);
+                             if(ipv61Element) ipv61Element.appendChild(createCopyButton(provider.ipsV6[0]));
+                             if(ipv62Element) ipv62Element.appendChild(createCopyButton(provider.ipsV6[1]));
+                        }
                     } else if (provider.host) {
                         const codeElement = elements.instructionsContent.querySelector('code');
                         if (codeElement) codeElement.appendChild(createCopyButton(provider.host));
