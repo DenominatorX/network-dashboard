@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project: Network Performance Dashboard</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+        }
+        .gradient-text {
+            background: -webkit-linear-gradient(45deg, #a78bfa, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-6">
+
+    <div class="max-w-3xl mx-auto text-center bg-gray-800/50 backdrop-blur-sm p-8 sm:p-12 rounded-3xl shadow-2xl border border-gray-700/50">
+        <!-- Header -->
+        <header class="mb-8">
+            <h1 class="text-4xl sm:text-5xl font-bold text-gray-100 mb-2">
+                Network Performance <span class="gradient-text">Dashboard</span>
+            </h1>
+            <p class="text-gray-400 mt-2 max-w-2xl mx-auto">
+                A lightweight, browser-based tool for real-time monitoring of your network latency and stability.
+            </p>
+        </header>
+
+        <!-- Description -->
+        <div class="text-left text-gray-300 space-y-4 mb-10 border-t border-b border-gray-700 py-6">
+            <p>This project provides a self-contained web application to help you visually track:</p>
+            <ul class="list-disc list-inside space-y-2 pl-4">
+                <li>Live latency to key internet services (Cloudflare & Google).</li>
+                <li>A historical log of latency spikes and their duration.</li>
+                <li>A real-time chart showing latency trends over a configurable time window.</li>
+                <li>A command-line style feed of every ping result.</li>
+            </ul>
+            <p>All settings, like ping frequency and spike sensitivity, are fully interactive.</p>
+        </div>
+
+        <!-- Navigation Button -->
+        <div class="mt-6">
+            <a href="network-dashboard.html" 
+               class="inline-block bg-violet-600 hover:bg-violet-500 text-white font-bold text-lg py-3 px-10 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300 ease-in-out">
+                Launch Dashboard
+            </a>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="mt-12 text-xs text-gray-500">
+            <p>Hosted on GitHub Pages. No data is ever stored or transmitted.</p>
+        </footer>
+    </div>
+
+</body>
+</html>
