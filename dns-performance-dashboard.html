@@ -19,7 +19,13 @@
         .nav-link { padding: 0.5rem 1rem; border-radius: 0.5rem; transition: background-color 0.2s; }
         .nav-link:hover { background-color: #4b5563; }
         .nav-link.active { background-color: #8b5cf6; color: white; font-weight: 600; }
-        .ip-address { font-family: 'Fira Code', monospace; background-color: #1f2937; padding: 0.25rem 0.5rem; border-radius: 4px; }
+        .ip-address, .kbd { font-family: 'Fira Code', monospace; }
+        .ip-address { background-color: #1f2937; padding: 0.25rem 0.5rem; border-radius: 4px; }
+        .kbd { background-color: #4b5563; padding: 0.1rem 0.4rem; border-radius: 4px; border: 1px solid #6b7280; }
+        .log-entry { font-family: 'Fira Code', monospace; font-size: 0.8rem; padding: 4px 8px; border-radius: 4px; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        .summary-item { cursor: pointer; transition: background-color 0.2s; }
+        .summary-item:hover { background-color: #4b5563; }
     </style>
 </head>
 <body class="bg-gray-900 text-white p-4 sm:p-6 lg:p-8">
@@ -35,188 +41,215 @@
                     <a href="dns-performance-dashboard.html" class="nav-link active">DNS Comparison</a>
                 </div>
             </nav>
-            <h1 class="text-3xl font-bold text-gray-100">DNS Performance Dashboard</h1>
-            <p class="text-gray-400 mt-1">Compare DNS provider latency in real-time to find the fastest one for you.</p>
+            <div class="flex flex-wrap justify-between items-center gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-100">DNS Performance Dashboard</h1>
+                    <p class="text-gray-400 mt-1">Simultaneously monitor major DNS providers to find the best for you.</p>
+                </div>
+                <div class="flex items-center gap-x-4 gap-y-2 flex-wrap bg-gray-800 p-3 rounded-lg shadow-md">
+                    <div class="flex items-center gap-2"><label for="pingFrequencySelect" class="text-sm font-medium">Ping Every</label><select id="pingFrequencySelect" class="custom-select"><option value="2500" selected>2.5s</option><option value="5000">5s</option></select></div>
+                    <div class="flex items-center gap-2"><label for="spikeThresholdSelect" class="text-sm font-medium">Spike If ></label><select id="spikeThresholdSelect" class="custom-select"><option value="100">100ms</option><option value="120" selected>120ms</option><option value="150">150ms</option></select></div>
+                    <div class="flex items-center gap-2"><label for="timeWindowSelect" class="text-sm font-medium">Avg. Over</label><select id="timeWindowSelect" class="custom-select"><option value="30">30s</option><option value="60" selected>60s</option></select></div>
+                </div>
+            </div>
         </header>
 
-        <!-- Main Content -->
-        <div class="bg-gray-800 p-6 rounded-2xl shadow-lg">
-            <!-- DNS Selection & Info Section -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 border-b border-gray-700 pb-6">
-                <!-- Target A -->
-                <div>
-                    <label for="dnsSelect1" class="text-lg font-semibold text-cyan-400 block mb-2">Target A</label>
-                    <select id="dnsSelect1" class="custom-select w-full"></select>
-                    <div id="dnsInfo1" class="mt-3 text-sm space-y-2 text-gray-400"></div>
-                </div>
-                <!-- Target B -->
-                <div>
-                    <label for="dnsSelect2" class="text-lg font-semibold text-violet-400 block mb-2">Target B</label>
-                    <select id="dnsSelect2" class="custom-select w-full"></select>
-                    <div id="dnsInfo2" class="mt-3 text-sm space-y-2 text-gray-400"></div>
-                </div>
+        <!-- Main Grid -->
+        <div class="space-y-6">
+            <!-- Top Row: Chart -->
+            <div class="bg-gray-800 p-6 rounded-2xl shadow-lg">
+                <h3 class="font-semibold text-xl text-gray-200 mb-4">Real-time Latency Comparison</h3>
+                <div class="h-80"><canvas id="comparisonChart"></canvas></div>
             </div>
 
-            <!-- Comparison Chart -->
-            <h3 class="font-semibold text-xl text-gray-200 mb-4">Real-time Latency Comparison</h3>
-            <div class="h-80"><canvas id="comparisonChart"></canvas></div>
-
-            <!-- Average Latency Display -->
-            <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
-                <div>
-                    <div id="avgLatency1" class="font-bold text-3xl text-cyan-400">--</div>
-                    <div class="text-sm text-gray-400">Avg. Latency (A)</div>
+            <!-- Middle Row: Summary & Spikes -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Performance Summary (Left) -->
+                <div class="bg-gray-800 p-6 rounded-2xl shadow-lg">
+                    <h3 class="font-semibold text-xl text-gray-200 mb-4">Performance Summary</h3>
+                    <div class="space-y-4">
+                        <div class="bg-gray-900/50 p-4 rounded-lg text-center">
+                            <div class="text-sm text-gray-400">Fastest Provider</div>
+                            <div id="bestChoice" class="text-2xl font-bold text-green-400 mt-1">--</div>
+                        </div>
+                        <div id="summaryList" class="space-y-3"></div>
+                    </div>
                 </div>
-                <div>
-                    <div id="avgLatency2" class="font-bold text-3xl text-violet-400">--</div>
-                    <div class="text-sm text-gray-400">Avg. Latency (B)</div>
+                <!-- Latency Spike Log (Right) -->
+                <div class="bg-gray-800 p-6 rounded-2xl shadow-lg">
+                    <h3 class="font-semibold text-xl text-gray-200 mb-4">Latency Spike Log</h3>
+                    <div id="spikeLog" class="h-96 overflow-y-auto space-y-1 pr-2"><p class="text-gray-500 text-sm">Monitoring for spikes...</p></div>
                 </div>
+            </div>
+            
+            <!-- Bottom Row: Instructions -->
+            <div class="bg-gray-800 p-6 rounded-2xl shadow-lg">
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+                    <h3 id="instructionsTitle" class="font-semibold text-xl text-gray-200">How to Change DNS</h3>
+                    <select id="platformSelect" class="custom-select"><option>Windows 11</option><option>Windows 10</option><option>macOS</option><option>iOS</option><option>Android</option></select>
+                </div>
+                <div id="instructionsContent" class="text-sm text-gray-300 space-y-3"></div>
             </div>
         </div>
 
-        <!-- Windows 11 Instructions -->
-        <div class="mt-6 bg-gray-800 p-6 rounded-2xl shadow-lg">
-            <h3 class="font-semibold text-xl text-gray-200 mb-3">How to Change DNS on Windows 11</h3>
-            <p class="text-sm text-gray-400 mb-4">After finding the fastest DNS provider, follow these steps to apply the settings.</p>
-            <ol class="list-decimal list-inside space-y-4 text-gray-300 text-sm">
-                <li>
-                    Open <strong>Settings</strong>, go to <strong>Network & internet</strong>, then select your connection type (e.g., <strong>Wi-Fi</strong> or <strong>Ethernet</strong>).
-                </li>
-                <li>
-                    Click on <strong>Hardware properties</strong>.
-                </li>
-                <li>
-                    Next to the "DNS server assignment" label, click the <strong>Edit</strong> button.
-                </li>
-                 <li>
-                    In the dialog box, select <strong>Manual</strong> from the dropdown menu.
-                </li>
-                <li>
-                    Turn on the switch for <strong>IPv4</strong>.
-                </li>
-                <li>
-                    In the "Preferred DNS" and "Alternate DNS" boxes, enter the IP addresses you copied from your chosen provider above.
-                </li>
-                <li>
-                    Click <strong>Save</strong> and the new settings will be applied. Your web browsing should now be faster and more responsive.
-                </li>
-            </ol>
-        </div>
-
-        <!-- Footer -->
-        <footer class="mt-8 text-center text-xs text-gray-500">
-            <p>Built as an interactive network utility. 
-                <a href="https://denominatorx.github.io/network-dashboard/" target="_blank" rel="noopener noreferrer" class="text-violet-400 hover:underline">
-                    View on GitHub
-                </a>
-            </p>
-        </footer>
+        <footer class="mt-8 text-center text-xs text-gray-500"><p>Built as an interactive network utility. <a href="https://denominatorx.github.io/network-dashboard/" target="_blank" rel="noopener noreferrer" class="text-violet-400 hover:underline">View on GitHub</a></p></footer>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const comparisonCtx = document.getElementById('comparisonChart').getContext('2d');
-            const dnsSelect1 = document.getElementById('dnsSelect1');
-            const dnsSelect2 = document.getElementById('dnsSelect2');
-            const dnsInfo1 = document.getElementById('dnsInfo1');
-            const dnsInfo2 = document.getElementById('dnsInfo2');
-            const avgLatency1 = document.getElementById('avgLatency1');
-            const avgLatency2 = document.getElementById('avgLatency2');
+            const elements = {
+                chartCtx: document.getElementById('comparisonChart').getContext('2d'),
+                spikeLog: document.getElementById('spikeLog'),
+                summaryList: document.getElementById('summaryList'),
+                bestChoice: document.getElementById('bestChoice'),
+                instructionsTitle: document.getElementById('instructionsTitle'),
+                instructionsContent: document.getElementById('instructionsContent'),
+                pingFreqSelect: document.getElementById('pingFrequencySelect'),
+                spikeThreshSelect: document.getElementById('spikeThresholdSelect'),
+                timeWindowSelect: document.getElementById('timeWindowSelect'),
+                platformSelect: document.getElementById('platformSelect'),
+            };
 
-            const PING_FREQUENCY = 2500;
-            const HISTORY_SECONDS = 60;
             const DNS_PROVIDERS = {
-                'cloudflare': { name: 'Cloudflare', url: 'https://1.1.1.1/favicon.ico', color: '#67e8f9', ips: ['1.1.1.1', '1.0.0.1'] },
-                'google': { name: 'Google', url: 'https://8.8.8.8/favicon.ico', color: '#c4b5fd', ips: ['8.8.8.8', '8.8.4.4'] },
-                'quad9': { name: 'Quad9', url: 'https://9.9.9.9/favicon.ico', color: '#a7f3d0', ips: ['9.9.9.9', '149.112.112.112'] },
-                'opendns': { name: 'OpenDNS', url: 'https://208.67.222.222/favicon.ico', color: '#fde047', ips: ['208.67.222.222', '208.67.220.220'] }
+                'cloudflare': { name: 'Cloudflare', url: 'https://1.1.1.1/favicon.ico', color: '#67e8f9', ips: ['1.1.1.1', '1.0.0.1'], host: 'one.one.one.one' },
+                'google': { name: 'Google', url: 'https://8.8.8.8/favicon.ico', color: '#c4b5fd', ips: ['8.8.8.8', '8.8.4.4'], host: 'dns.google' },
+                'quad9': { name: 'Quad9', url: 'https://9.9.9.9/favicon.ico', color: '#a7f3d0', ips: ['9.9.9.9', '149.112.112.112'], host: 'dns.quad9.net' },
+                'opendns': { name: 'OpenDNS', url: 'https://208.67.222.222/favicon.ico', color: '#fde047', ips: ['208.67.222.222', '208.67.220.220'], host: null }
             };
 
-            let pingIntervalId = null;
-            let history1 = [], history2 = [];
+            let state = {
+                pingFrequency: 2500, spikeThreshold: 120, timeWindow: 60,
+                pingIntervalId: null, history: {}, frozenProviderKey: null,
+            };
 
-            const comparisonChart = new Chart(comparisonCtx, {
+            Object.keys(DNS_PROVIDERS).forEach(key => state.history[key] = []);
+
+            const comparisonChart = new Chart(elements.chartCtx, {
                 type: 'line',
-                data: { datasets: [ { label: 'Target A', data: [], borderColor: '#67e8f9', borderWidth: 2.5, tension: 0.4, pointRadius: 0, fill: false }, { label: 'Target B', data: [], borderColor: '#c4b5fd', borderWidth: 2.5, tension: 0.4, pointRadius: 0, fill: false } ] },
-                options: {
-                    responsive: true, maintainAspectRatio: false, animation: { duration: 250 },
-                    scales: {
-                        x: { type: 'time', time: { unit: 'second', displayFormats: { second: 'h:mm:ss a' }}, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#9ca3af' }},
-                        y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#9ca3af' }, title: { display: true, text: 'Latency (ms)', color: '#9ca3af'} }
-                    },
-                    plugins: { legend: { position: 'top', labels: { color: '#d1d5db' } } }
-                }
+                data: { datasets: Object.entries(DNS_PROVIDERS).map(([k, p]) => ({ label: p.name, data: [], borderColor: p.color, borderWidth: 2.5, tension: 0.4, pointRadius: 0, fill: false })) },
+                options: { responsive: true, maintainAspectRatio: false, animation: {duration:250}, scales: { x: { type: 'time', time: { unit: 'second', displayFormats: { second: 'h:mm:ss a' }}, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#9ca3af' }}, y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#9ca3af' }, title: { display: true, text: 'Latency (ms)', color: '#9ca3af'} } }, plugins: { legend: { position: 'top', labels: { color: '#d1d5db' } } } }
             });
-
-            const ping = async (url) => {
-                try {
-                    const startTime = performance.now();
-                    await fetch(`${url}?t=${Date.now()}`, { method: 'HEAD', mode: 'no-cors', cache: 'no-store' });
-                    return Math.round(performance.now() - startTime);
-                } catch (e) { return null; }
-            };
-
-            const updateDashboard = async () => {
-                const [latency1, latency2] = await Promise.all([ ping(DNS_PROVIDERS[dnsSelect1.value].url), ping(DNS_PROVIDERS[dnsSelect2.value].url) ]);
-                const now = Date.now();
-                if(latency1 !== null) history1.push({ x: now, y: latency1 });
-                if(latency2 !== null) history2.push({ x: now, y: latency2 });
-                history1 = history1.filter(p => now - p.x <= HISTORY_SECONDS * 1000);
-                history2 = history2.filter(p => now - p.x <= HISTORY_SECONDS * 1000);
-                comparisonChart.data.datasets[0].data = history1;
-                comparisonChart.data.datasets[1].data = history2;
-                comparisonChart.update('none');
-                const calculateAvg = (h) => h.length ? Math.round(h.reduce((a, b) => a + b.y, 0) / h.length) : '--';
-                avgLatency1.textContent = `${calculateAvg(history1)} ms`;
-                avgLatency2.textContent = `${calculateAvg(history2)} ms`;
-            };
             
             const createCopyButton = (text) => {
                 const button = document.createElement('button');
                 button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block stroke-current text-gray-500 hover:text-white transition-colors"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
                 button.className = "ml-2";
-                button.onclick = () => {
-                    const originalText = button.innerHTML;
-                    navigator.clipboard.writeText(text).then(() => {
-                        button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="inline-block stroke-current text-green-400"><path d="M20 6 9 17l-5-5"></path></svg>`;
-                        setTimeout(() => button.innerHTML = originalText, 1500);
-                    });
-                };
+                button.onclick = (e) => { e.stopPropagation(); const o = button.innerHTML; navigator.clipboard.writeText(text).then(() => { button.innerHTML=`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="inline-block stroke-current text-green-400"><path d="M20 6 9 17l-5-5"></path></svg>`; setTimeout(()=>button.innerHTML=o, 1500) }) };
                 return button;
             };
 
-            const updateDnsInfo = () => {
-                const provider1 = DNS_PROVIDERS[dnsSelect1.value];
-                const provider2 = DNS_PROVIDERS[dnsSelect2.value];
-                dnsInfo1.innerHTML = `<div>Preferred: <code class="ip-address">${provider1.ips[0]}</code></div><div>Alternate: <code class="ip-address">${provider1.ips[1]}</code></div>`;
-                dnsInfo2.innerHTML = `<div>Preferred: <code class="ip-address">${provider2.ips[0]}</code></div><div>Alternate: <code class="ip-address">${provider2.ips[1]}</code></div>`;
-                dnsInfo1.querySelectorAll('div').forEach((div, i) => div.appendChild(createCopyButton(provider1.ips[i])));
-                dnsInfo2.querySelectorAll('div').forEach((div, i) => div.appendChild(createCopyButton(provider2.ips[i])));
+            const updateDynamicUI = (bestProviderKey = null) => {
+                const providerKeyToShow = state.frozenProviderKey || bestProviderKey;
+                const provider = providerKeyToShow ? DNS_PROVIDERS[providerKeyToShow] : null;
+
+                let titleHTML = `How to Change DNS`;
+                if (provider) {
+                    titleHTML += ` (<span style="color: ${provider.color}; font-weight: 600;">${provider.name}</span>)`;
+                }
+                if (state.frozenProviderKey) {
+                    titleHTML += ` <button id="clearSelectionBtn" class="text-xs text-gray-400 hover:text-white hover:underline">(clear)</button>`;
+                }
+                elements.instructionsTitle.innerHTML = titleHTML;
+
+                const platform = elements.platformSelect.value;
+                const displayProvider = provider || { name: '[Provider]', ips: ['x.x.x.x', 'y.y.y.y'], host: '[hostname]'};
+                let content = '';
+                
+                switch(platform) {
+                    case 'Windows 11': content = `<ol class="list-decimal list-inside space-y-3"><li>Open <strong>Settings</strong> > <strong>Network & internet</strong>.</li><li>Select connection (e.g., <strong>Wi-Fi</strong>), then <strong>Hardware properties</strong>.</li><li>Near "DNS server assignment", click <strong>Edit</strong>.</li><li>Select <strong>Manual</strong>, turn on <strong>IPv4</strong>.</li><li>Enter IPs: <ul class="list-disc list-inside ml-6 mt-2 space-y-1"><li id="windows11-ip1">Preferred: <code class="ip-address">${displayProvider.ips[0]}</code></li><li id="windows11-ip2">Alternate: <code class="ip-address">${displayProvider.ips[1]}</code></li></ul></li><li class="pt-1">Click <strong>Save</strong>.</li></ol>`; break;
+                    case 'Windows 10': content = `<ol class="list-decimal list-inside space-y-3"><li>Right-click Start, select <strong>Network Connections</strong>.</li><li>Click <strong>Change adapter options</strong>.</li><li>Right-click your connection, select <strong>Properties</strong>.</li><li>Select <strong>Internet Protocol Version 4 (TCP/IPv4)</strong>, click <strong>Properties</strong>.</li><li>Select "Use the following DNS...": <ul class="list-disc list-inside ml-6 mt-2 space-y-1"><li id="windows10-ip1">Preferred: <code class="ip-address">${displayProvider.ips[0]}</code></li><li id="windows10-ip2">Alternate: <code class="ip-address">${displayProvider.ips[1]}</code></li></ul></li><li class="pt-1">Click <strong>OK</strong>.</li></ol>`; break;
+                    case 'macOS': content = `<ol class="list-decimal list-inside space-y-3"><li>Open <strong>System Settings</strong> > <strong>Network</strong>.</li><li>Select connection, click <strong>Details...</strong>, go to <strong>DNS</strong> tab.</li><li>Click <strong>+</strong> to enter IPs: <ul class="list-disc list-inside ml-6 mt-2 space-y-1"><li id="macos-ip1">Server 1: <code class="ip-address">${displayProvider.ips[0]}</code></li><li id="macos-ip2">Server 2: <code class="ip-address">${displayProvider.ips[1]}</code></li></ul></li><li class="pt-1">Click <strong>OK</strong>.</li></ol>`; break;
+                    case 'iOS': content = `<ol class="list-decimal list-inside space-y-3"><li><strong>Settings</strong> > <strong>Wi-Fi</strong>, tap "i" on your network.</li><li>Tap <strong>Configure DNS</strong>, select <strong>Manual</strong>.</li><li>Tap <strong>Add Server</strong> for each IP: <ul class="list-disc list-inside ml-6 mt-2 space-y-1"><li id="ios-ip1">Add: <code class="ip-address">${displayProvider.ips[0]}</code></li><li id="ios-ip2">Add: <code class="ip-address">${displayProvider.ips[1]}</code></li></ul></li><li class="pt-1">Delete old IPs, then <strong>Save</strong>.</li></ol>`; break;
+                    case 'Android': content = `<ol class="list-decimal list-inside space-y-3"><li><strong>Settings</strong> > <strong>Network & internet</strong> > <strong>Private DNS</strong>.</li><li>Select <strong>Private DNS provider hostname</strong>.</li><li>Enter: <code class="ip-address">${displayProvider.host || 'Not available'}</code></li><li class="pt-1">Tap <strong>Save</strong>.</li></ol>`; break;
+                }
+                elements.instructionsContent.innerHTML = content;
+                
+                if (provider) {
+                    if(platform !== 'Android') {
+                        const selectorBase = platform.toLowerCase().replace(' ', '');
+                        const ip1Element = elements.instructionsContent.querySelector(`#${selectorBase}-ip1`);
+                        const ip2Element = elements.instructionsContent.querySelector(`#${selectorBase}-ip2`);
+                        if (ip1Element) ip1Element.appendChild(createCopyButton(provider.ips[0]));
+                        if (ip2Element) ip2Element.appendChild(createCopyButton(provider.ips[1]));
+                    } else if (provider.host) {
+                        const codeElement = elements.instructionsContent.querySelector('code');
+                        if (codeElement) codeElement.appendChild(createCopyButton(provider.host));
+                    }
+                }
+                if (state.frozenProviderKey) {
+                    const clearButton = document.getElementById('clearSelectionBtn');
+                    if (clearButton) {
+                        clearButton.addEventListener('click', () => {
+                            state.frozenProviderKey = null;
+                            updateDynamicUI(bestProviderKey);
+                        });
+                    }
+                }
+            };
+            
+            const addSpikeLog = (providerName, latency) => {
+                 if (elements.spikeLog.querySelector('p')) elements.spikeLog.innerHTML = '';
+                 const entry = document.createElement('div');
+                 entry.className = `log-entry bg-red-500/20 text-red-300`;
+                 entry.textContent = `[${new Date().toLocaleTimeString()}] Spike: ${providerName} @ ${latency}ms`;
+                 elements.spikeLog.prepend(entry);
+                 if (elements.spikeLog.children.length > 50) elements.spikeLog.lastChild.remove();
+            };
+
+            const updateDashboard = async () => {
+                const pings = Object.entries(DNS_PROVIDERS).map(async ([key, provider]) => ({ key, latency: await (async (url) => { try { const start=performance.now(); await fetch(`${url}?t=${Date.now()}`,{method:'HEAD',mode:'no-cors',cache:'no-store'}); return Math.round(performance.now()-start); } catch(e){return null;} })(provider.url) }));
+                
+                const results = await Promise.all(pings);
+                const now = Date.now();
+                let averages = {};
+                let bestProvider = { key: null, avg: Infinity };
+
+                results.forEach(({ key, latency }, index) => {
+                    if (latency !== null) {
+                        state.history[key].push({ x: now, y: latency });
+                        if (latency > state.spikeThreshold) addSpikeLog(DNS_PROVIDERS[key].name, latency);
+                    }
+                    state.history[key] = state.history[key].filter(p => now - p.x <= state.timeWindow * 1000);
+                    comparisonChart.data.datasets[index].data = state.history[key];
+                    
+                    const avg = state.history[key].length ? Math.round(state.history[key].reduce((a, b) => a + b.y, 0) / state.history[key].length) : null;
+                    averages[key] = avg;
+                    if (avg !== null && avg < bestProvider.avg) bestProvider = { key, avg };
+                });
+                
+                comparisonChart.update('none');
+                
+                elements.summaryList.innerHTML = Object.entries(DNS_PROVIDERS).map(([key, p]) => `
+                    <div class="summary-item flex justify-between items-center bg-gray-700/50 p-3 rounded-lg" data-key="${key}">
+                        <div class="flex items-center gap-3 pointer-events-none"><div class="w-3 h-3 rounded-full" style="background-color:${p.color}"></div><span class="font-medium">${p.name}</span></div>
+                        <div class="font-semibold text-lg pointer-events-none">${averages[key] !== null ? averages[key] + ' ms' : '--'}</div>
+                    </div>
+                `).join('');
+
+                elements.bestChoice.textContent = bestProvider.key ? DNS_PROVIDERS[bestProvider.key].name : '--';
+                elements.bestChoice.style.color = bestProvider.key ? DNS_PROVIDERS[bestProvider.key].color : 'text-green-400';
+                updateDynamicUI(bestProvider.key);
             };
             
             const restartMonitoring = () => {
-                clearInterval(pingIntervalId);
-                history1 = []; history2 = [];
-                const provider1 = DNS_PROVIDERS[dnsSelect1.value];
-                const provider2 = DNS_PROVIDERS[dnsSelect2.value];
-                comparisonChart.data.datasets[0].label = provider1.name;
-                comparisonChart.data.datasets[0].borderColor = provider1.color;
-                comparisonChart.data.datasets[1].label = provider2.name;
-                comparisonChart.data.datasets[1].borderColor = provider2.color;
-                updateDnsInfo();
+                clearInterval(state.pingIntervalId);
+                state.pingFrequency = parseInt(elements.pingFreqSelect.value);
+                state.spikeThreshold = parseInt(elements.spikeThreshSelect.value);
+                state.timeWindow = parseInt(elements.timeWindowSelect.value);
+                Object.keys(state.history).forEach(k => state.history[k] = []);
                 updateDashboard();
-                pingIntervalId = setInterval(updateDashboard, PING_FREQUENCY);
+                state.pingIntervalId = setInterval(updateDashboard, state.pingFrequency);
             };
 
-            Object.entries(DNS_PROVIDERS).forEach(([key, provider], index) => {
-                dnsSelect1.add(new Option(provider.name, key));
-                dnsSelect2.add(new Option(provider.name, key));
-                if (index === 0) dnsSelect1.value = key;
-                if (index === 1) dnsSelect2.value = key;
+            elements.pingFreqSelect.addEventListener('change', restartMonitoring);
+            elements.spikeThreshSelect.addEventListener('change', restartMonitoring);
+            elements.timeWindowSelect.addEventListener('change', restartMonitoring);
+            elements.platformSelect.addEventListener('change', () => updateDynamicUI());
+            elements.summaryList.addEventListener('click', (e) => {
+                const target = e.target.closest('.summary-item');
+                if (target) { state.frozenProviderKey = target.dataset.key; updateDynamicUI(); }
             });
-            dnsSelect1.addEventListener('change', restartMonitoring);
-            dnsSelect2.addEventListener('change', restartMonitoring);
-            
+
             restartMonitoring();
         });
     </script>
