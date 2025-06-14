@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DNS Performance Dashboard</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .custom-select { background-color: #374151; border: 1px solid #4b5563; color: white; padding: 0.5rem; border-radius: 8px; font-size: 0.875rem; }
+        .nav-link { padding: 0.5rem 1rem; border-radius: 0.5rem; transition: background-color 0.2s; }
+        .nav-link:hover { background-color: #4b5563; }
+        .nav-link.active { background-color: #8b5cf6; color: white; font-weight: 600; }
+        .ip-address { font-family: 'Fira Code', monospace; background-color: #1f2937; padding: 0.25rem 0.5rem; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white p-4 sm:p-6 lg:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header & Navigation -->
+        <header class="mb-6">
+            <nav class="bg-gray-800 p-3 rounded-xl flex flex-wrap justify-center sm:justify-between items-center mb-6">
+                <div class="text-xl font-bold text-gray-100 mb-2 sm:mb-0">Dashboard Suite</div>
+                <div class="flex items-center gap-2 text-sm font-medium text-gray-300">
+                    <a href="index.html" class="nav-link">Home</a>
+                    <a href="network-dashboard.html" class="nav-link">Network Monitor</a>
+                    <a href="dns-performance-dashboard.html" class="nav-link active">DNS Comparison</a>
+                </div>
+            </nav>
+            <h1 class="text-3xl font-bold text-gray-100">DNS Performance Dashboard</h1>
+            <p class="text-gray-400 mt-1">Compare DNS provider latency in real-time to find the fastest one for you.</p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="bg-gray-800 p-6 rounded-2xl shadow-lg">
+            <!-- DNS Selection & Info Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 border-b border-gray-700 pb-6">
+                <!-- Target A -->
+                <div>
+                    <label for="dnsSelect1" class="text-lg font-semibold text-cyan-400 block mb-2">Target A</label>
+                    <select id="dnsSelect1" class="custom-select w-full"></select>
+                    <div id="dnsInfo1" class="mt-3 text-sm space-y-2 text-gray-400"></div>
+                </div>
+                <!-- Target B -->
+                <div>
+                    <label for="dnsSelect2" class="text-lg font-semibold text-violet-400 block mb-2">Target B</label>
+                    <select id="dnsSelect2" class="custom-select w-full"></select>
+                    <div id="dnsInfo2" class="mt-3 text-sm space-y-2 text-gray-400"></div>
+                </div>
+            </div>
+
+            <!-- Comparison Chart -->
+            <h3 class="font-semibold text-xl text-gray-200 mb-4">Real-time Latency Comparison</h3>
+            <div class="h-80"><canvas id="comparisonChart"></canvas></div>
+
+            <!-- Average Latency Display -->
+            <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
+                <div>
+                    <div id="avgLatency1" class="font-bold text-3xl text-cyan-400">--</div>
+                    <div class="text-sm text-gray-400">Avg. Latency (A)</div>
+                </div>
+                <div>
+                    <div id="avgLatency2" class="font-bold text-3xl text-violet-400">--</div>
+                    <div class="text-sm text-gray-400">Avg. Latency (B)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Windows 11 Instructions -->
+        <div class="mt-6 bg-gray-800 p-6 rounded-2xl shadow-lg">
+            <h3 class="font-semibold text-xl text-gray-200 mb-3">How to Change DNS on Windows 11</h3>
+            <p class="text-sm text-gray-400 mb-4">After finding the fastest DNS provider, follow these steps to apply the settings.</p>
+            <ol class="list-decimal list-inside space-y-4 text-gray-300 text-sm">
+                <li>
+                    Open <strong>Settings</strong>, go to <strong>Network & internet</strong>, then select your connection type (e.g., <strong>Wi-Fi</strong> or <strong>Ethernet</strong>).
+                </li>
+                <li>
+                    Click on <strong>Hardware properties</strong>.
+                </li>
+                <li>
+                    Next to the "DNS server assignment" label, click the <strong>Edit</strong> button.
+                </li>
+                 <li>
+                    In the dialog box, select <strong>Manual</strong> from the dropdown menu.
+                </li>
+                <li>
+                    Turn on the switch for <strong>IPv4</strong>.
+                </li>
+                <li>
+                    In the "Preferred DNS" and "Alternate DNS" boxes, enter the IP addresses you copied from your chosen provider above.
+                </li>
+                <li>
+                    Click <strong>Save</strong> and the new settings will be applied. Your web browsing should now be faster and more responsive.
+                </li>
+            </ol>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-8 text-center text-xs text-gray-500">
+            <p>Built as an interactive network utility. 
+                <a href="https://denominatorx.github.io/network-dashboard/" target="_blank" rel="noopener noreferrer" class="text-violet-400 hover:underline">
+                    View on GitHub
+                </a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const comparisonCtx = document.getElementById('comparisonChart').getContext('2d');
+            const dnsSelect1 = document.getElementById('dnsSelect1');
+            const dnsSelect2 = document.getElementById('dnsSelect2');
+            const dnsInfo1 = document.getElementById('dnsInfo1');
+            const dnsInfo2 = document.getElementById('dnsInfo2');
+            const avgLatency1 = document.getElementById('avgLatency1');
+            const avgLatency2 = document.getElementById('avgLatency2');
+
+            const PING_FREQUENCY = 2500;
+            const HISTORY_SECONDS = 60;
+            const DNS_PROVIDERS = {
+                'cloudflare': { name: 'Cloudflare', url: 'https://1.1.1.1/favicon.ico', color: '#67e8f9', ips: ['1.1.1.1', '1.0.0.1'] },
+                'google': { name: 'Google', url: 'https://8.8.8.8/favicon.ico', color: '#c4b5fd', ips: ['8.8.8.8', '8.8.4.4'] },
+                'quad9': { name: 'Quad9', url: 'https://9.9.9.9/favicon.ico', color: '#a7f3d0', ips: ['9.9.9.9', '149.112.112.112'] },
+                'opendns': { name: 'OpenDNS', url: 'https://208.67.222.222/favicon.ico', color: '#fde047', ips: ['208.67.222.222', '208.67.220.220'] }
+            };
+
+            let pingIntervalId = null;
+            let history1 = [], history2 = [];
+
+            const comparisonChart = new Chart(comparisonCtx, {
+                type: 'line',
+                data: { datasets: [ { label: 'Target A', data: [], borderColor: '#67e8f9', borderWidth: 2.5, tension: 0.4, pointRadius: 0, fill: false }, { label: 'Target B', data: [], borderColor: '#c4b5fd', borderWidth: 2.5, tension: 0.4, pointRadius: 0, fill: false } ] },
+                options: {
+                    responsive: true, maintainAspectRatio: false, animation: { duration: 250 },
+                    scales: {
+                        x: { type: 'time', time: { unit: 'second', displayFormats: { second: 'h:mm:ss a' }}, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#9ca3af' }},
+                        y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#9ca3af' }, title: { display: true, text: 'Latency (ms)', color: '#9ca3af'} }
+                    },
+                    plugins: { legend: { position: 'top', labels: { color: '#d1d5db' } } }
+                }
+            });
+
+            const ping = async (url) => {
+                try {
+                    const startTime = performance.now();
+                    await fetch(`${url}?t=${Date.now()}`, { method: 'HEAD', mode: 'no-cors', cache: 'no-store' });
+                    return Math.round(performance.now() - startTime);
+                } catch (e) { return null; }
+            };
+
+            const updateDashboard = async () => {
+                const [latency1, latency2] = await Promise.all([ ping(DNS_PROVIDERS[dnsSelect1.value].url), ping(DNS_PROVIDERS[dnsSelect2.value].url) ]);
+                const now = Date.now();
+                if(latency1 !== null) history1.push({ x: now, y: latency1 });
+                if(latency2 !== null) history2.push({ x: now, y: latency2 });
+                history1 = history1.filter(p => now - p.x <= HISTORY_SECONDS * 1000);
+                history2 = history2.filter(p => now - p.x <= HISTORY_SECONDS * 1000);
+                comparisonChart.data.datasets[0].data = history1;
+                comparisonChart.data.datasets[1].data = history2;
+                comparisonChart.update('none');
+                const calculateAvg = (h) => h.length ? Math.round(h.reduce((a, b) => a + b.y, 0) / h.length) : '--';
+                avgLatency1.textContent = `${calculateAvg(history1)} ms`;
+                avgLatency2.textContent = `${calculateAvg(history2)} ms`;
+            };
+            
+            const createCopyButton = (text) => {
+                const button = document.createElement('button');
+                button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block stroke-current text-gray-500 hover:text-white transition-colors"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+                button.className = "ml-2";
+                button.onclick = () => {
+                    const originalText = button.innerHTML;
+                    navigator.clipboard.writeText(text).then(() => {
+                        button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="inline-block stroke-current text-green-400"><path d="M20 6 9 17l-5-5"></path></svg>`;
+                        setTimeout(() => button.innerHTML = originalText, 1500);
+                    });
+                };
+                return button;
+            };
+
+            const updateDnsInfo = () => {
+                const provider1 = DNS_PROVIDERS[dnsSelect1.value];
+                const provider2 = DNS_PROVIDERS[dnsSelect2.value];
+                dnsInfo1.innerHTML = `<div>Preferred: <code class="ip-address">${provider1.ips[0]}</code></div><div>Alternate: <code class="ip-address">${provider1.ips[1]}</code></div>`;
+                dnsInfo2.innerHTML = `<div>Preferred: <code class="ip-address">${provider2.ips[0]}</code></div><div>Alternate: <code class="ip-address">${provider2.ips[1]}</code></div>`;
+                dnsInfo1.querySelectorAll('div').forEach((div, i) => div.appendChild(createCopyButton(provider1.ips[i])));
+                dnsInfo2.querySelectorAll('div').forEach((div, i) => div.appendChild(createCopyButton(provider2.ips[i])));
+            };
+            
+            const restartMonitoring = () => {
+                clearInterval(pingIntervalId);
+                history1 = []; history2 = [];
+                const provider1 = DNS_PROVIDERS[dnsSelect1.value];
+                const provider2 = DNS_PROVIDERS[dnsSelect2.value];
+                comparisonChart.data.datasets[0].label = provider1.name;
+                comparisonChart.data.datasets[0].borderColor = provider1.color;
+                comparisonChart.data.datasets[1].label = provider2.name;
+                comparisonChart.data.datasets[1].borderColor = provider2.color;
+                updateDnsInfo();
+                updateDashboard();
+                pingIntervalId = setInterval(updateDashboard, PING_FREQUENCY);
+            };
+
+            Object.entries(DNS_PROVIDERS).forEach(([key, provider], index) => {
+                dnsSelect1.add(new Option(provider.name, key));
+                dnsSelect2.add(new Option(provider.name, key));
+                if (index === 0) dnsSelect1.value = key;
+                if (index === 1) dnsSelect2.value = key;
+            });
+            dnsSelect1.addEventListener('change', restartMonitoring);
+            dnsSelect2.addEventListener('change', restartMonitoring);
+            
+            restartMonitoring();
+        });
+    </script>
+</body>
+</html>

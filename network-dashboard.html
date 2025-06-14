@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Interactive Network Dashboard</title>
+    <title>Network Monitoring Dashboard</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -23,79 +23,56 @@
         .ping-log { font-family: 'Fira Code', monospace; font-size: 0.875rem; line-height: 1.5; }
         .ping-log-entry { animation: slideIn 0.3s ease; }
         @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        .nav-link { padding: 0.5rem 1rem; border-radius: 0.5rem; transition: background-color 0.2s; }
+        .nav-link:hover { background-color: #4b5563; }
+        .nav-link.active { background-color: #8b5cf6; color: white; font-weight: 600; }
     </style>
 </head>
 <body class="bg-gray-900 text-white p-4 sm:p-6 lg:p-8">
 
     <div class="max-w-7xl mx-auto">
-        <!-- Header & Controls -->
         <header class="mb-6">
+            <nav class="bg-gray-800 p-3 rounded-xl flex flex-wrap justify-center sm:justify-between items-center mb-6">
+                <div class="text-xl font-bold text-gray-100 mb-2 sm:mb-0">Dashboard Suite</div>
+                <div class="flex items-center gap-2 text-sm font-medium text-gray-300">
+                    <a href="index.html" class="nav-link">Home</a>
+                    <a href="network-dashboard.html" class="nav-link active">Network Monitor</a>
+                    <a href="dns-performance-dashboard.html" class="nav-link">DNS Comparison</a>
+                </div>
+            </nav>
             <div class="flex flex-wrap justify-between items-center gap-4">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-100">Advanced Network Dashboard</h1>
-                    <p class="text-gray-400 mt-1">Interactive monitoring of network latency and stability.</p>
+                    <h1 class="text-3xl font-bold text-gray-100">General Network Monitor</h1>
+                    <p class="text-gray-400 mt-1">Real-time monitoring of your connection latency and stability.</p>
                 </div>
                 <div class="flex items-center gap-x-4 gap-y-2 flex-wrap bg-gray-800 p-3 rounded-lg shadow-md">
-                    <div class="flex items-center gap-2">
-                        <label for="pingFrequencySelect" class="text-sm font-medium text-gray-300">Ping every</label>
-                        <select id="pingFrequencySelect" class="custom-select">
-                            <option value="1500">1.5s</option>
-                            <option value="2500" selected>2.5s</option>
-                            <option value="5000">5s</option>
-                        </select>
-                    </div>
-                     <div class="flex items-center gap-2">
-                        <label for="spikeThresholdSelect" class="text-sm font-medium text-gray-300">Spike if ></label>
-                        <select id="spikeThresholdSelect" class="custom-select">
-                            <option value="80">80 ms</option>
-                            <option value="120" selected>120 ms</option>
-                            <option value="150">150 ms</option>
-                        </select>
-                    </div>
+                    <div class="flex items-center gap-2"><label for="pingFrequencySelect" class="text-sm font-medium text-gray-300">Ping every</label><select id="pingFrequencySelect" class="custom-select"><option value="1500">1.5s</option><option value="2500" selected>2.5s</option><option value="5000">5s</option></select></div>
+                    <div class="flex items-center gap-2"><label for="spikeThresholdSelect" class="text-sm font-medium text-gray-300">Spike if ></label><select id="spikeThresholdSelect" class="custom-select"><option value="80">80 ms</option><option value="120" selected>120 ms</option><option value="150">150 ms</option></select></div>
                 </div>
             </div>
         </header>
 
-        <!-- Dashboard Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div class="bg-gray-800 p-6 rounded-2xl shadow-lg"><h3 class="font-semibold text-gray-200">WiFi / Internet Latency</h3><p id="wifiSubtitle" class="text-xs text-gray-500 mb-4">Pinging 1.1.1.1...</p><div class="relative h-40 flex items-center justify-center"><canvas id="wifiLatencyChart"></canvas><div id="wifiLatencyText" class="gauge-text">--</div><div class="gauge-label">ms</div></div></div>
             <div class="bg-gray-800 p-6 rounded-2xl shadow-lg"><h3 class="font-semibold text-gray-200">Remote Desktop Stability</h3><p id="remoteSubtitle" class="text-xs text-gray-500 mb-4">Pinging 8.8.8.8...</p><div class="relative h-40 flex items-center justify-center"><canvas id="remoteLatencyChart"></canvas><div id="remoteLatencyText" class="gauge-text">--</div><div class="gauge-label">ms</div></div></div>
             <div class="bg-gray-800 p-6 rounded-2xl shadow-lg flex flex-col"><h3 class="font-semibold text-gray-200">Latency Spike Log</h3><p id="spikeLogSubtitle" class="text-xs text-gray-500 mb-4">Events > 120ms to 8.8.8.8</p><div id="spikeLog" class="flex-grow h-40 overflow-y-auto space-y-1 pr-2"><p class="text-gray-500 text-sm">Monitoring for spikes...</p></div></div>
             <div class="bg-gray-800 p-6 rounded-2xl shadow-lg">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 class="font-semibold text-gray-200">Latency Over Time</h3>
-                    <select id="timeWindowSelect" class="custom-select -mr-2 -my-1">
-                        <option value="30">Last 30s</option>
-                        <option value="60" selected>Last 60s</option>
-                        <option value="120">Last 2m</option>
-                        <option value="300">Last 5m</option>
-                    </select>
-                </div>
-                 <div class="flex justify-between items-baseline">
-                     <p class="text-xs text-gray-500">History from 8.8.8.8</p>
-                     <div class="text-right"><div id="avgLatencyDisplay" class="font-semibold text-lg text-violet-400">-- ms</div><div class="text-xs text-gray-500 -mt-1">Average</div></div>
-                </div>
+                <div class="flex justify-between items-center mb-2"><h3 class="font-semibold text-gray-200">Latency Over Time</h3><select id="timeWindowSelect" class="custom-select -mr-2 -my-1"><option value="30">Last 30s</option><option value="60" selected>Last 60s</option><option value="120">Last 2m</option><option value="300">Last 5m</option></select></div>
+                <div class="flex justify-between items-baseline"><p class="text-xs text-gray-500">History from 8.8.8.8</p><div class="text-right"><div id="avgLatencyDisplay" class="font-semibold text-lg text-violet-400">-- ms</div><div class="text-xs text-gray-500 -mt-1">Average</div></div></div>
                 <div class="h-32 mt-2"><canvas id="latencyHistoryChart"></canvas></div>
             </div>
         </div>
 
-        <!-- Live Ping Log -->
         <div class="mt-6 bg-gray-800 p-4 rounded-2xl shadow-lg">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="font-semibold text-gray-200">Live Ping Feed (8.8.8.8)</h3>
-                <button id="copyLogButton" class="text-sm bg-gray-600 hover:bg-gray-500 text-gray-200 font-semibold py-1 px-3 rounded-md transition-colors duration-200">
-                    Copy Log
-                </button>
-            </div>
-            <div id="livePingLog" class="bg-black h-48 rounded-lg p-3 overflow-y-auto ping-log">
-                <div class="text-gray-500">Starting ping process...</div>
-            </div>
+            <div class="flex justify-between items-center mb-2"><h3 class="font-semibold text-gray-200">Live Ping Feed (8.8.8.8)</h3><button id="copyLogButton" class="text-sm bg-gray-600 hover:bg-gray-500 text-gray-200 font-semibold py-1 px-3 rounded-md transition-colors duration-200">Copy Log</button></div>
+            <div id="livePingLog" class="bg-black h-48 rounded-lg p-3 overflow-y-auto ping-log"><div class="text-gray-500">Starting ping process...</div></div>
         </div>
-    </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- Elements ---
+        <!-- The rest of the script from the original file remains the same -->
+        <script>
+            // The full script from the previous version ('system_monitor_dashboard_v5') goes here.
+            // It is omitted for brevity but should be copied from the previous response.
+            // A small addition is the new Nav bar.
+            document.addEventListener('DOMContentLoaded', () => {
             const latencyHistoryCtx = document.getElementById('latencyHistoryChart').getContext('2d');
             const wifiLatencyCtx = document.getElementById('wifiLatencyChart').getContext('2d');
             const remoteLatencyCtx = document.getElementById('remoteLatencyChart').getContext('2d');
@@ -110,7 +87,6 @@
             const wifiSubtitle = document.getElementById('wifiSubtitle');
             const remoteSubtitle = document.getElementById('remoteSubtitle');
 
-            // --- State ---
             let spikeThreshold = 120;
             let pingFrequency = 2500;
             let timeWindowSeconds = 60;
@@ -120,20 +96,17 @@
             const MAX_LOG_ENTRIES = 20;
             let latencyHistory = []; 
 
-            // --- Ghost Needle Plugin for Gauges ---
             const ghostNeedlePlugin = {
                 id: 'ghostNeedle',
                 afterDraw: (chart) => {
                     if (chart.canvas.id !== 'wifiLatencyChart' && chart.canvas.id !== 'remoteLatencyChart') return;
                     if (typeof chart.previousData === 'undefined') return;
-
                     const { ctx, chartArea: { left, right } } = chart;
                     const meta = chart.getDatasetMeta(0);
                     const angle = Math.PI + (Math.PI * (chart.previousData / chart.options.maxDataValue));
                     const centerX = (left + right) / 2;
                     const centerY = meta.data[0].y; 
                     const outerRadius = meta.data[0].outerRadius;
-
                     ctx.save();
                     ctx.beginPath();
                     ctx.moveTo(centerX, centerY);
@@ -145,8 +118,6 @@
                 }
             };
             Chart.register(ghostNeedlePlugin);
-
-            // --- Chart Instantiation ---
             const latencyHistoryChart = new Chart(latencyHistoryCtx, {
                  type: 'line',
                 data: { datasets: [{ data: [], borderColor: '#a78bfa', borderWidth: 2, fill: true, backgroundColor: (() => { const g = latencyHistoryCtx.createLinearGradient(0,0,0,120); g.addColorStop(0,'#a78bfa4D'); g.addColorStop(1,'#a78bfa00'); return g; })(), tension: 0.4, pointRadius: 0 }] },
@@ -161,8 +132,6 @@
             const createGaugeConfig = (color) => ({ type: 'doughnut', data: { datasets: [{ data: [0, 300], backgroundColor: [color, '#4b5563'], borderColor: ['#1f2937', '#1f2937'], borderWidth: 2, circumference: 180, rotation: -90, cutout: '80%' }] }, options: { responsive: true, maintainAspectRatio: false, maxDataValue: 300, plugins: { legend: { display: false }, tooltip: { enabled: false }}} });
             const wifiLatencyChart = new Chart(wifiLatencyCtx, createGaugeConfig('#34d399'));
             const remoteLatencyChart = new Chart(remoteLatencyCtx, createGaugeConfig('#f87171'));
-
-            // --- Logic ---
             function updateHistoryChart() {
                 const now = Date.now();
                 const visibleHistory = latencyHistory.filter(p => now - p.x <= timeWindowSeconds * 1000);
@@ -170,7 +139,6 @@
                 latencyHistoryChart.options.scales.x.min = now - timeWindowSeconds * 1000;
                 latencyHistoryChart.options.scales.x.max = now;
                 latencyHistoryChart.update('none');
-
                 const validPoints = visibleHistory.filter(p => p.y !== null);
                 if (validPoints.length > 0) {
                     const sum = validPoints.reduce((acc, point) => acc + point.y, 0);
@@ -179,7 +147,6 @@
                     avgLatencyDisplay.textContent = '-- ms';
                 }
             }
-
             function addLivePingEntry(latency) {
                 if (livePingLogContainer.querySelector('div.text-gray-500')) livePingLogContainer.innerHTML = '';
                 const entry = document.createElement('div');
@@ -192,7 +159,6 @@
                 livePingLogContainer.prepend(entry);
                 if (livePingLogContainer.children.length > 50) livePingLogContainer.lastChild.remove();
             }
-            
             async function measureAllLatency() {
                 const maxGaugeLatency = 300;
                 try {
@@ -203,8 +169,7 @@
                     wifiLatencyChart.data.datasets[0].data = [latency, maxGaugeLatency - latency];
                     wifiLatencyChart.update();
                     document.getElementById('wifiLatencyText').textContent = latency;
-                } catch(e) {/*fail silently*/}
-
+                } catch(e) {}
                 let currentGoogleLatency = null;
                 try {
                     const startTime = performance.now();
@@ -214,21 +179,17 @@
                     remoteLatencyChart.data.datasets[0].data = [currentGoogleLatency, maxGaugeLatency - currentGoogleLatency];
                     remoteLatencyChart.update();
                     document.getElementById('remoteLatencyText').textContent = currentGoogleLatency;
-
                     latencyHistory.push({ x: Date.now(), y: currentGoogleLatency });
                     if(latencyHistory.length > 200) latencyHistory.shift(); 
                     updateHistoryChart();
-                    
                     handleSpikeLogic(currentGoogleLatency);
-                    addLivePingEntry(currentGoogleLatency);
-
-                } catch(e) { /*fail silently*/ }
+                    if (currentGoogleLatency !== null) { addLivePingEntry(currentGoogleLatency); }
+                } catch(e) { }
             }
-            
             function handleSpikeLogic(latency) { 
+                if (latency === null) return;
                 const now = new Date();
                 const timestamp = now.toLocaleTimeString();
-
                 if (latency > spikeThreshold && !isSpiking) {
                     isSpiking = true;
                     spikeStartTime = performance.now();
@@ -247,7 +208,6 @@
                 spikeLogContainer.prepend(logEntry);
                 if (spikeLogContainer.children.length > MAX_LOG_ENTRIES) { spikeLogContainer.lastChild.remove(); }
             }
-
             function startPinging() {
                 if (pingIntervalId) clearInterval(pingIntervalId);
                 measureAllLatency();
@@ -256,17 +216,12 @@
                 wifiSubtitle.textContent = `Pinging 1.1.1.1 every ${freqInSeconds}s`;
                 remoteSubtitle.textContent = `Pinging 8.8.8.8 every ${freqInSeconds}s`;
             }
-
-            // --- Event Listeners ---
             spikeThresholdSelect.addEventListener('change', (e) => { spikeThreshold = parseInt(e.target.value); spikeLogSubtitle.textContent = `Events > ${spikeThreshold}ms to 8.8.8.8`; });
             pingFrequencySelect.addEventListener('change', (e) => { pingFrequency = parseInt(e.target.value); startPinging(); });
             timeWindowSelect.addEventListener('change', (e) => { timeWindowSeconds = parseInt(e.target.value); updateHistoryChart(); });
-            
             copyLogButton.addEventListener('click', () => {
                 const logEntries = livePingLogContainer.querySelectorAll('.ping-log-entry');
-                // The log is prepended, so we reverse to get chronological order for copying
                 const logText = Array.from(logEntries).reverse().map(entry => entry.textContent).join('\n');
-                
                 const textarea = document.createElement('textarea');
                 textarea.value = logText;
                 document.body.appendChild(textarea);
@@ -278,14 +233,11 @@
                     copyLogButton.textContent = 'Error!';
                 }
                 document.body.removeChild(textarea);
-
-                setTimeout(() => {
-                    copyLogButton.textContent = 'Copy Log';
-                }, 2000);
+                setTimeout(() => { copyLogButton.textContent = 'Copy Log'; }, 2000);
             });
-
             startPinging();
         });
-    </script>
+        </script>
+    </div>
 </body>
 </html>
